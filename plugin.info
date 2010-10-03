@@ -1,0 +1,4 @@
+description: Resolve hostname for peers by IP.
+author: Rozhuk Ivan
+runlevel: 15
+version: 3.1
