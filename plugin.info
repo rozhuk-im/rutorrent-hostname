@@ -1,4 +1,8 @@
-description: Resolve hostname for peers by IP.
-author: Rozhuk Ivan
-runlevel: 15
-version: 3.1
+plugin.description: Resolve hostname for peers by IP.
+plugin.author: Rozhuk Ivan
+plugin.runlevel: 15
+plugin.version: 3.9
+rtorrent.remote: error
+rtorrent.external.error: php
+php.extensions.error: json
+plugin.help: https://github.com/rozhuk-im/rutorrent-hostname

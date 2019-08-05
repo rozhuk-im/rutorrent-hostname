@@ -2,275 +2,190 @@
 plugin.loadLang();
 
 
-if(plugin.enabled)
-{
-	var strCacheHostIP=new Array();
-	var strCacheHostName=new Array();
-	var tCacheHostLastTime=new Array();
+if (plugin.enabled) {
+	var g_cache_host_addr = new Array();
+	var g_cache_host_name = new Array();
+	var g_cache_host_time = new Array();
 
-	// SETTINGS
-	var dwCacheSize=256;			// num of cache entryes
-	var dwCacheSizeMax=2048;		// max num of cache entryes
-	//var dwCacheReqRetryTime=15000;	// if request failed, retry after... milliseconds -> theWebUI.settings["webui.reqtimeout"]
-	var dwCacheItemUnUseTime=120000;	// if items more than CacheSizeMax, delete unused items... milliseconds
-	var dwCacheItemUnUseTimeMax=600000; // delete most unused items even if items cont lower than CacheSize... milliseconds
+	/* SETTINGS */
+	var g_cache_size = 1024; /* Max count of cache items. */
 
 
-
-
-	function LookupSuccess(data)
-	{
-		var php=data.split("<|>");
-		CacheAdd(php[0],php[1]);
+	function resolve_host_name_success(data) {
+		var res = data.split("<|>");
+		cache_add(res[0], res[1]);
+		console.log("Resolved host name for address:", res[0], "is", res[1]);
 	}
 
-	function LookupFailure(XMLHttpRequest,textStatus,errorThrown) {}
-
-
-
-	function CacheFindInArray(aArray,vValue)
-	{// bin searth
-		var dwRetIndex=-1;
-		var lft=0;
-		var rt=aArray.length;
-		var m;
-
-		if (rt > 0)
-		{
-			rt--;
-			while(lft<=rt)
-			{
-				m=((lft+rt)>>>1);
-				if (aArray[m].toString() == vValue.toString())
-				{
-					dwRetIndex=m;
-					break;
-				}else{
-					if (aArray[m].toString() > vValue.toString())
-					{
-						rt=m-1;
-					}else{
-						lft=m+1;
-					}
-				}
-			}
-		}
-	return dwRetIndex;
+	function resolve_host_name_failure(XMLHttpRequest, textStatus, errorThrown) {
+		console.log("Fail to resolve host name:", textStatus, errorThrown);
 	}
 
+	function resolve_host_name(host_addr) {
+		var jqAjaxReq;
 
-	function CacheDeleteOld()
-	{
-		// filter - less cpu usage
-		if ((strCacheHostIP.length&7)!=7) return;
+		jqAjaxReq = jQuery.ajax( {
+		  type: "POST",
+		  processData: true,
+		  contentType: "application/x-www-form-urlencoded",
+		  async : true,
+		  cache : false,
+		  timeout: theWebUI.settings["webui.reqtimeout"],
+		  url : "plugins/hostname/lookup.php",
+		  data : { ip : host_addr},
+		  dataType : "text",
+		  success : resolve_host_name_success,
+		  error: resolve_host_name_failure } );
+	}
 
+	/* Delete oldest item from cache. */
+	function cache_delete_oldest() {
+		var i, count = g_cache_host_addr.length;
+		var old_idx, old_time, ttime;
 
-		var i;
-		var dwCount;
-		var tTime=new Date();
-		var tTimeNow;
-		var tTimeCurItem;
-		var tTimeOldest;
-		var dwOldestIndex=-1;
-		var dwCacheItemUnUseTimeCur;
+		if (count <= g_cache_size)
+			return;
 
-
-		if (strCacheHostIP.length < dwCacheSize)
-		{// cache normal, delete recently unused items
-			dwCacheItemUnUseTimeCur=dwCacheItemUnUseTimeMax;
-		}else{// cache overflow, delete unused items
-			dwCacheItemUnUseTimeCur=dwCacheItemUnUseTime;
-		}
-
-		tTimeNow=tTime.getTime();
-		tTimeOldest=tTimeNow;
-		dwCount=strCacheHostIP.length;
-		for (i=0;i<dwCount;i++)
-		{
-			tTimeCurItem=tCacheHostLastTime[i];
-			if (dwCacheItemUnUseTimeCur < (tTimeNow-tTimeCurItem))
-			{
-				strCacheHostIP.splice(i,1);
-				strCacheHostName.splice(i,1);
-				tCacheHostLastTime.splice(i,1);
-			}else{
-				if (tTimeCurItem<tTimeOldest)
-				{
-					tTimeOldest=tTimeCurItem;
-					dwOldestIndex=i;
-				}
+		old_idx = 0;
+		old_time = g_cache_host_time[0];
+		for (i = 1; i < count; i ++) {
+			ttime = g_cache_host_time[i];
+			if (ttime < old_time) {
+				old_time = ttime;
+				old_idx = i;
 			}
 		}
 
+		g_cache_host_addr.splice(old_idx, 1);
+		g_cache_host_name.splice(old_idx, 1);
+		g_cache_host_time.splice(old_idx, 1);
 
-		if (strCacheHostIP.length > dwCacheSizeMax && dwOldestIndex!=-1)
-		{// cache overflow, delete oldest record, even if it lower than CacheItemUnUseTime
-			strCacheHostIP.splice(dwOldestIndex,1);
-			strCacheHostName.splice(dwOldestIndex,1);
-			tCacheHostLastTime.splice(dwOldestIndex,1);
-		}
+		return (old_idx);
 	}
 
+	/* Bin search. */
+	function cache_find(val) {
+		var m = 0, lft = 0, rt = g_cache_host_addr.length;
 
-	function CacheAdd(strHostIP,strHostName)
-	{
-		var dwRetIndex=-1;
-		var lft=0;
-		var rt=strCacheHostIP.length;
-		var m=0;
-		var tTime=new Date();
-
-		if (strHostName == null) {strHostName="-";}
-
-		// bin search/insert
-		if (rt > 0)
-		{
-			rt--;
-			while(lft<=rt)
-			{
-				m=((lft+rt)>>>1);
-				if (strCacheHostIP[m].toString() < strHostIP.toString())
-				{
-					lft=m+1;
-				}else{
-					if (strCacheHostIP[m].toString() > strHostIP.toString())
-					{
-						rt=m-1;
-					}else{
-						dwRetIndex=m;
-						break;
-					}
-				}
+		if (rt == 0)
+			return [0, 0];
+		rt --;
+		while (lft <= rt) {
+			m = ((lft + rt) >>> 1);
+			if (g_cache_host_addr[m].toString() == val.toString())
+				return [1, m]; /* Found! */
+			if (g_cache_host_addr[m].toString() > val.toString()) {
+				rt = (m - 1);
+			} else {
+				lft = (m + 1);
 			}
 		}
-
-		if (dwRetIndex==-1)
-		{// add new item
-			if (strCacheHostIP.length > 0)
-			{
-				dwRetIndex=m;
-				if (strCacheHostIP[m].toString() < strHostIP.toString()) {dwRetIndex++;}
-			}else{
-				dwRetIndex=0;
-			}
-			strCacheHostIP.splice(dwRetIndex,0,strHostIP);
-			strCacheHostName.splice(dwRetIndex,0,strHostName);
-			tCacheHostLastTime.splice(dwRetIndex,0,tTime.getTime());
-
-			CacheDeleteOld();
-
-			//alert(strCacheHostIP.join('\r\n')); // debug helper
-		}else{// update existing
-			//strCacheHostIP[dwRetIndex]=strHostIP;// allready equal
-			strCacheHostName[dwRetIndex]=strHostName;
-			tCacheHostLastTime[dwRetIndex]=tTime.getTime();
-		}
-
-	return dwRetIndex;
+		return [0, m];
 	}
 
+	function cache_add(host_addr, host_name) {
+		var found, index, tTime = new Date();
 
-	function CacheHostNameGet(strHostIP)
-	{
-		var strRetHostName;
-		var dwIndex;
-		var jqAjaxReq=false;
-
-		dwIndex=CacheFindInArray(strCacheHostIP,strHostIP);
-		if (dwIndex==-1)
-		{
-			CacheAdd(strHostIP,"-");
-			jqAjaxReq=true;
-			strRetHostName="...";
-		}else{
-			var tTime=new Date();
-
-			strRetHostName=strCacheHostName[dwIndex];
-			if (strRetHostName == null)
-			{
-				strRetHostName="-";
-			}else{
-				if (strRetHostName[dwIndex] == "-")
-				{
-					if ((tTime.getTime()-tCacheHostLastTime[dwIndex]) > theWebUI.settings["webui.reqtimeout"])
-					{
-						tCacheHostLastTime[dwIndex]=tTime.getTime();
-						jqAjaxReq=true;
-					}
-				}else{
-					tCacheHostLastTime[dwIndex]=tTime.getTime();
-				}
-			}
+		if (host_name == null) {
+			host_name = "-";
 		}
 
-		if (jqAjaxReq==true)
-		{
-			jqAjaxReq=jQuery.ajax( {
-				type: "POST",
-				processData: true,
-				contentType: "application/x-www-form-urlencoded",
-				async : true,
-				cache : false,
-				timeout: theWebUI.settings["webui.reqtimeout"],
-		    		url : "plugins/hostname/lookup.php",
-	    			data : { ip : strHostIP},
-	    			dataType : "text",
-		    		success : LookupSuccess,
-		    		error: LookupFailure } );
+		/* Make sure that we have space. */
+		cache_delete_oldest();
+
+		[found, index] = cache_find(host_addr);
+		if (found == 1) {
+			/* Update existing. */
+			/* g_cache_host_addr[index] = host_addr; Allready set. */
+			g_cache_host_name[index] = host_name;
+			g_cache_host_time[index] = tTime.getTime();
+			return (index);
 		}
 
-	return strRetHostName;
+		/* Add new item. */
+		if (g_cache_host_addr.length > 0 &&
+		    g_cache_host_addr.length > index &&
+		    g_cache_host_addr[index].toString() < host_addr.toString()) {
+			index ++;
+		}
+		g_cache_host_addr.splice(index, 0, host_addr);
+		g_cache_host_name.splice(index, 0, host_name);
+		g_cache_host_time.splice(index, 0, tTime.getTime());
+
+		return (index);
 	}
 
+	function cache_get_host_name(host_addr) {
+		var host_name, found, index, jqAjaxReq = false;
+		var tTime = new Date();
 
+		[found, index] = cache_find(host_addr);
+		if (found == 0) {
+			/* First time add. */
+			cache_add(host_addr, "-");
+			resolve_host_name(host_addr);
+			return ("..."); /* Mean: resolve started. */
+		}
+
+		host_name = g_cache_host_name[index];
+		if (host_name == null) {
+			host_name = "-";
+			g_cache_host_name[index] = "-";
+		}
+		if (host_name == "-") {
+			/* Resolve in process. */
+			if ((tTime.getTime() - g_cache_host_time[index]) > theWebUI.settings["webui.reqtimeout"]) {
+				/* Retry resolve. */
+				g_cache_host_time[index] = tTime.getTime();
+				resolve_host_name(host_addr);
+			}
+		} else {
+			/* Update cache item time. */
+			g_cache_host_time[index] = tTime.getTime();
+		}
+
+		return (host_name);
+	}
 
 	plugin.config = theWebUI.config;
-	theWebUI.config = function(data)
-	{
-		if(plugin.canChangeColumns())
-		{
-			this.tables.prs.columns.unshift({text : 'hostname', width : '80px', id: 'hostname', type : TYPE_STRING});
+	theWebUI.config = function(data) {
+		if (plugin.canChangeColumns()) {
+			this.tables.prs.columns.unshift({
+			  text : 'hostname',
+			  width : '80px',
+			  id: 'hostname',
+			  type : TYPE_STRING});
 		}
-		plugin.config.call(this,data);
+		plugin.config.call(this, data);
 		plugin.done();
 	}
 
-
 	plugin.getpeersResponse = rTorrentStub.prototype.getpeersResponse;
-	rTorrentStub.prototype.getpeersResponse = function(xml)
-	{
-		var peers = plugin.getpeersResponse.call(this,xml);
-		if(plugin.enabled)
-		{
-			$.each( peers, function(id,peer)
-			{
-				peer.hostname = CacheHostNameGet(peer.ip);
+	rTorrentStub.prototype.getpeersResponse = function(xml) {
+		var peers = plugin.getpeersResponse.call(this, xml);
+		if (plugin.enabled) {
+			$.each(peers, function(id, peer) {
+				peer.hostname = cache_get_host_name(peer.ip);
 			});
 		}
-		return(peers);
+		return (peers);
 	}
 
-
-	if(plugin.canChangeColumns())
-	{
-		plugin.done = function()
-		{
-			if(plugin.allStuffLoaded)
-			{
+	if (plugin.canChangeColumns()) {
+		plugin.done = function() {
+			if (plugin.allStuffLoaded) {
 				var table = theWebUI.getTable("prs");
-				table.renameColumnById("hostname",theUILang.HostName);
-			} else
-				setTimeout(arguments.callee,1000);
+				table.renameColumnById("hostname",
+				  theUILang.HostName);
+			} else {
+				setTimeout(arguments.callee, 1000);
+			}
 		}
 	}
-
 }
 
-
-plugin.onRemove = function()
-{
-        if(plugin.retrieveCountry)
+plugin.onRemove = function() {
+	if (plugin.retrieveCountry) {
 		theWebUI.getTable("prs").removeColumnById("hostname");
+	}
 }
-
-

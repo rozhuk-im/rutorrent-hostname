@@ -1,5 +1,5 @@
 
-theUILang.HostName = "HostName";
+theUILang.HostName = "Имя хоста";
 
 thePlugins.get("hostname").langLoaded();
 

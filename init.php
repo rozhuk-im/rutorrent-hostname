@@ -1,10 +1,9 @@
 <?php
 
-
-	if ( $theSettings->iVersion >= 0x805 )
+	if ($theSettings->iVersion >= 0x805) {
 		$theSettings->registerPlugin("hostname");
-	else
+	} else {
 		$jResult .= "plugin.disable();";
-
+	}
 
 ?>
