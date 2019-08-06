@@ -1,3 +1,3 @@
-theUILang.HostName = "Hostname";
+theUILang.HostName = "Värdnamn";
 
 thePlugins.get("hostname").langLoaded();

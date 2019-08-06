@@ -4,5 +4,6 @@ plugin.runlevel: 15
 plugin.version: 3.9
 rtorrent.remote: error
 rtorrent.external.error: php
+php.version: 5.2.0
 php.extensions.error: json
 plugin.help: https://github.com/rozhuk-im/rutorrent-hostname

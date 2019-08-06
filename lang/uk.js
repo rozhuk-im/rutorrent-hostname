@@ -1,3 +1,3 @@
-theUILang.HostName = "Hostname";
+theUILang.HostName = "вузол";
 
 thePlugins.get("hostname").langLoaded();
