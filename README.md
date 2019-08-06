@@ -4,21 +4,33 @@ HostName Plugin for RUTorrent
 The purpose of this plugin is to show hostnames of peers for selected torrent.
 Based on GeoIP plugin.
 
-![Screenshot](screenshot.png)
-
+![Screenshot](http://www.netlab.linkpc.net/download/software/rtorrent/rutorrent/hostnames.png)
 
 Goals
 -----
-- async requests
-- add hostname column instead of show hostnames in Address column
+- Async requests
+- Add hostname column instead of show hostnames in Address column
 
 
-Usage
------
+Requirements
+------------
 
-Unpack the plugin archive into rutorrent/plugins directory and refresh
-contents of your browser. If everything is OK, you should see a new
-column "Host Name" in "Peers" tab.
+* PHP >= 5.2.0
+* PHP 'json' extension
+
+
+Installation
+------------
+
+Place all the plugin files in a directory called 'hostname' in the rutorrent/plugins directory.
+
+To clone directly from this git repository, run this command in the rutorrent/plugins directory:
+
+`git clone https://github.com/rozhuk-im/rutorrent-hostname.git hostname`
+
+> **Note:** It is important that the plugin directory is named 'hostname' so that the supporting files are loaded correctly.
+
+> **Info:** If everything is OK, you should see a new column "Hostname" in "Peers" tab.
 
 
 
