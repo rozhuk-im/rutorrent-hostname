@@ -61,6 +61,9 @@ Change log
 3.9 (05.08.2019)
 - Total refactoring
 
+3.91 (23.11.2025)
+- Add IPv6 addrs support
+
 
 Contact
 -------

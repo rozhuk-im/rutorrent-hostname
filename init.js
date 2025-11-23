@@ -117,6 +117,12 @@ if (plugin.enabled) {
 		var host_name, found, index, jqAjaxReq = false;
 		var tTime = new Date();
 
+		if (host_addr.startsWith("[::ffff:")) {
+			host_addr = host_addr.substring(8, (host_addr.length - 1));
+		} else if (host_addr.startsWith("[")) {
+			host_addr = host_addr.substring(1, (host_addr.length - 1));
+		}
+
 		[found, index] = cache_find(host_addr);
 		if (found == 0) {
 			/* First time add. */
